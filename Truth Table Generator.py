@@ -1,3 +1,9 @@
+#################################
+## Name: Truth Table Generator
+##
+## Auth: Quinn Hodges
+#################################
+
 import pprint as pp
 
 class TruthTable:
