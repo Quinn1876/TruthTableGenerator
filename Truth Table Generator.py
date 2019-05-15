@@ -205,11 +205,11 @@ Please select the first and second proposition for your \"if and only if\" state
 
 
         self.printPropositions()
-        print(' | '.join([str(i+1) for i in range(len(self.table[0]))]))
-        print('---'.join(['-' for i in range(len(self.table[0]))]))
+        print(' | '.join([str(self.table[0][i][0]) for i in range(len(self.table[0]))]))
+        print('---'.join(['-' * len(str(self.table[0][i][0])) for i in range(len(self.table[0]))]))
 
         for i in range(1 << self.numAtomics):
-            print(' | '.join([str(self.table[1][j][i]) for j in range(len(self.table[1]))]))
+            print(' | '.join([(str(self.table[1][j][i]) + ' ' * (len(self.table[0][j][0]) - 1))  for j in range(len(self.table[1]))]))
 
 
     def evaluate(self, col):
