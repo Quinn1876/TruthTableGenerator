@@ -17,7 +17,7 @@ class TruthTable:
         for i in range(num):
             self.table[0].append([self.aProps[i], 'atomic'])
         for i in range(num):
-            self.appendCompound(self.notText(self.mapIndexToName(i)), "NOT", i+1)
+            self.appendCompound(self.notText(self.mapIndexToName(i+1)), "NOT", i+1)
         self.numAtomics += num
 
     def appendCompound(self, string, Type, prop1, prop2=None):
@@ -199,7 +199,7 @@ Please select the first and second proposition for your \"if and only if\" state
 
     def evaluateTable(self):
         self.table[1] = []
-        rows = 1
+        rows = 0
         for col in range(len(self.table[0])):
             if self.table[0][col][1] == "atomic":
                 self.table[1].append(([1 for i in range((1 << self.numAtomics)//(1<< col+1))] + [0 for i in range((1 << self.numAtomics)//(1<< col+1))]) * (1<<col))
