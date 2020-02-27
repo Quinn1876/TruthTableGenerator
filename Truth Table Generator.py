@@ -6,23 +6,71 @@
 
 import pprint as pp
 
-class TruthTable:
-    aProps = ['q', 'p', 'r', 'm', 'n', 's', 't']
+class Proposition:
+  def __init__(self, type_, label=None, prop1=None, prop2=None):
+    if type_ == 'atomic' and (not prop1 is None or not prop2 is None):
+      raise InvalidPropError
+    if type_ != 'atomic' and prop1 is None and not prop2 is None:
+      raise InvalidPropError
 
+    self.type = type_
+    self.label = label
+    self.prop1: Proposition = prop1
+    self.prop2: Proposition = prop2
+
+    self.propTypes = {
+      'atomic': lambda a, b: self.label,
+      'NOT': Proposition.notText,
+      'OR': Proposition.orText,
+      'AND': Proposition.andText,
+      'INFERS': Proposition.inferenceText,
+      'IMPLIES': Proposition.implicationText,
+      'IFAOIF': Proposition.ifAndOnlyIfText,
+    }
+
+  def __str__(self):
+    return self.propTypes.get(self.type, lambda a, b: '')(str(self.prop1), str(self.prop2))
+
+  @classmethod
+  def orText(cls, a, b):
+    return "(%s \/ %s)" % (a,b)
+
+  @classmethod
+  def andText(cls, a, b):
+    return "(%s /\ %s)" % (a,b)
+
+  @classmethod
+  def notText(cls, a, b):
+    return f"(~{a})"
+
+  @classmethod
+  def implicationText(cls, a, b):
+    return f"({a} ==> {b})"
+
+  @classmethod
+  def inferenceText(cls, a, b):
+    return "(%s <== %s)" % (a,b)
+
+  @classmethod
+  def ifAndOnlyIfText(cls, a, b):
+    return "(%s <==> %s)" % (a,b)
+
+class InvalidPropError(Exception):
+  pass
+
+class TruthTable:
     def __init__(self):
         self.table = [[], []]
         self.numAtomics = 0
+        self.aProps = (n for n in range(65, 123))
 
-    def appendAtomic(self, num):
-        for i in range(num):
-            self.table[0].append([self.aProps[i], 'atomic'])
-        for i in range(num):
-            self.appendCompound(self.notText(self.mapIndexToName(i+1)), "NOT", i+1)
-        self.numAtomics += num
-
-    def appendCompound(self, string, Type, prop1, prop2=None):
-
-        self.table[0].append([string, Type, str(int(prop1) - 1), str(int(prop2) - 1) if prop2 is not None else None])
+    def appendProposition(self, type_, **kwargs):
+      if type_ == 'atomic':
+        self.table[0].append(Proposition('atomic', label=chr(int(next(self.aProps)))))
+        self.table[0].append(Proposition('NOT', prop1=self.table[0][len(self.table[0]) - 1]))
+        self.numAtomics += 1
+      else:
+        self.table[0].append(Proposition(type_, **kwargs))
 
     def mapIndexToName(self, index1, index2=None):
         if index2 is not None:
@@ -39,32 +87,8 @@ class TruthTable:
     def printPropositions(self):
         print("#" * 10)
         for i in range(len(self.table[0])):
-            print('%d: %s' % (i + 1, self.table[0][i][0]))
+            print('%d: %s' % (i + 1, str(self.table[0][i])))
         print("#" * 10)
-
-    @staticmethod
-    def orText(a, b):
-        return "(%s \/ %s)" % (a,b)
-
-    @staticmethod
-    def andText(a, b):
-        return "(%s /\ %s)" % (a,b)
-
-    @staticmethod
-    def notText(a):
-        return "(~%s)" % a
-
-    @staticmethod
-    def implicationText(a, b):
-         return "(%s ==> %s)" % (a,b)
-
-    @staticmethod
-    def inferenceText(a, b):
-        return "(%s <== %s)" % (a,b)
-
-    @staticmethod
-    def ifAndOnlyIfText(a, b):
-        return "(%s <==> %s)" % (a,b)
 
     def OR(self):
         print("""
@@ -81,7 +105,7 @@ Please select the first and second proposition for your or statement:
         except:
             return -1
 
-        self.appendCompound(TruthTable.orText(*self.mapIndexToName(*x)), "OR", int(x[0]), int(x[1]))
+        self.appendProposition("OR", prop1=self.table[0][int(x[0]) - 1], prop2=self.table[0][int(x[1]) - 1])
         print("Propositions Updated")
         self.printPropositions()
         return 0
@@ -101,7 +125,7 @@ Please select the first and second proposition for your and statement:
             return -1
 
 
-        self.appendCompound(TruthTable.andText(*self.mapIndexToName(*x)), "AND", int(x[0]), int(x[1]))
+        self.appendProposition( "AND", prop1=self.table[0][int(x[0]) - 1], prop2=self.table[0][int(x[1]) - 1])
 
         print("Propositions Updated")
         self.printPropositions()
@@ -115,7 +139,7 @@ Please select the first and second proposition for your and statement:
         if len(ui) != 1 or not self.validateInput(ui):
             return -1
 
-        self.appendCompound(self.notText(self.mapIndexToName(ui)), "NOT", ui)
+        self.appendProposition("NOT", prop1=self.table[0][ui-1])
 
         print("Propositions Updated")
         self.printPropositions()
@@ -136,7 +160,7 @@ Please select the first and second proposition for your implication:
             return -1
 
 
-        self.appendCompound(TruthTable.implicationText(*self.mapIndexToName(*x)), "IMPLIES", int(x[0]), int(x[1]))
+        self.appendProposition("IMPLIES", prop1=self.table[0][int(x[0])-1], prop2=self.table[0][int(x[1])-1])
 
         print("Propositions Updated")
         self.printPropositions()
@@ -155,7 +179,7 @@ Please select the first and second proposition for your inference:
             return -1
 
 
-        self.appendCompound(TruthTable.inferenceText(*self.mapIndexToName(*x)), "INFERS", int(x[0]), int(x[1]))
+        self.appendProposition("INFERS",prop1=self.table[0][int(x[0]) - 1], prop2=self.table[0][int(x[1]) - 1])
 
         print("Propositions Updated")
         self.printPropositions()
@@ -174,7 +198,7 @@ Please select the first and second proposition for your \"if and only if\" state
             return -1
 
 
-        self.appendCompound(TruthTable.ifAndOnlyIfText(*self.mapIndexToName(*x)), "IFAOIF", int(x[0]), int(x[1]))
+        self.appendProposition("IFAOIF", prop1=self.table[0][int(x[0]) - 1], prop2=self.table[int(x[1]) - 1])
 
         print("Propositions Updated")
         self.printPropositions()
@@ -201,7 +225,7 @@ Please select the first and second proposition for your \"if and only if\" state
         self.table[1] = []
         rows = 0
         for col in range(len(self.table[0])):
-            if self.table[0][col][1] == "atomic":
+            if self.table[0][col].type == "atomic":
                 self.table[1].append(([1 for i in range((1 << self.numAtomics)//(1<< col+1))] + [0 for i in range((1 << self.numAtomics)//(1<< col+1))]) * (1<<col))
                 rows += 1
 
@@ -220,49 +244,49 @@ Please select the first and second proposition for your \"if and only if\" state
 
     def evaluate(self, col):
         prop = self.table[0][col]
-        if prop[1] == "atomic":
+        if prop.type == "atomic":
             return self.table[1][col]
         else:
-            a = self.evaluate( int(prop[2]) )
-            if (type(prop[3]) == str):
-                b = self.evaluate( int(prop[3]) )
+            a = self.evaluate( int(prop.prop1) )
+            if (type(prop.prop2) == str):
+                b = self.evaluate( int(prop.prop2) )
             c = []
 
-            if prop[1] == "OR":
+            if prop.type == "OR":
                 for i in range(len(a)):
                     if bool(a[i]) or bool(b[i]):
                         c.append(1)
                     else:
                         c.append(0)
 
-            elif prop[1] == "AND":
+            elif prop.type == "AND":
                 for i in range(len(a)):
                     if bool(a[i]) and bool(b[i]):
                         c.append(1)
                     else:
                         c.append(0)
 
-            elif prop[1] == "NOT":
+            elif prop.type == "NOT":
                 for i in range(len(a)):
                     if bool(a[i]):
                         c.append(0)
                     else:
                         c.append(1)
-            elif prop[1] == "IMPLIES":
+            elif prop.type == "IMPLIES":
                 for i in range(len(a)):
                     if bool(a[i]):
                         c.append(b[i])
                     else:
                         c.append(1)
 
-            elif prop[1] == "INFERS":
+            elif prop.type == "INFERS":
                 for i in range(len(a)):
                     if bool(b[i]):
                         c.append(a[i])
                     else:
                         c.append(1)
 
-            elif prop[1] == "IFAOIF":
+            elif prop.type == "IFAOIF":
                 for i in range(len(a)):
                     if int(a[i]) == int(b[i]):
                         c.append(1)
@@ -278,15 +302,15 @@ Please select the first and second proposition for your \"if and only if\" state
 ttable = TruthTable()
 
 while True:
-    ui = input("How many atomic propositions would you like(1-7)?")
+    ui = input("How many atomic propositions would you like?")
     try:
         x = int(ui)
-        if (x in range(1, 8)):
-            break
+        break
     except:
         continue
 print("x = %d" % x)
-ttable.appendAtomic(x)
+for i in range(x):
+  ttable.appendProposition('atomic')
 
 ##################### MAIN LOOP ##################################
 while True:
